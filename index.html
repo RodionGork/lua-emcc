@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+<head>
+  <title>Lua 5.4.6 sandbox in your browser</title>
+  <script src="jquery.js"></script>
+  <script src="lua.js"></script>
+  <style>
+    body {
+      max-width: 1200px;
+      margin: 0px auto;
+      font-family: sans-serif;
+    }
+    #outbox {
+      background:black;
+      color:yellow;
+      font-family: monospace;
+      min-height:150px;
+      width: 100%;
+      font-size: 150%;
+      margin: 10px 0px;
+    }
+    #input {
+      width: 100%;
+      margin: 10px 0px;
+      font-size: 125%;
+      font-family: monospace;
+    }
+    .hint {
+      color: #444;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <h1>Lua 5.4.6 - in browser</h1>
+    <div id="foreword" class="hint">Compiled from Lua sources to JavaScript using EMCC</div>
+    <textarea id="outbox" disabled="true"></textarea>
+    <textarea id="input" placeholder="your input>"></textarea><br/>
+    <button onclick="doExecute()">Execute</button>
+    &nbsp;|&nbsp;
+    <input id="autoclear" type="checkbox" checked="true">auto-clear command box</input>
+    &nbsp;|&nbsp;
+    <a href="#" onclick="doClear(); return false">clear output</a>
+  </div>
+<script>
+
+var cnt = 0;
+
+var outbox = $('#outbox');
+var input = $('#input');
+var schemeInitialized = false;
+
+function doOutput(text) {
+  outbox.val(outbox.val() + text);
+}
+
+function doClear() {
+  outbox.val('');
+}
+
+function doExecute() {
+  var line = input.val();
+  doOutput('> ' + line + '\n');
+  Module.ccall('passInput', null, ['string'], [line]);
+  outbox.scrollTop = outbox.scrollHeight;
+  if ($('#autoclear').prop('checked')) {
+    input.val('');
+  }
+}
+
+function adjustHeights() {
+  var ch = $('#container').height();
+  var wh = $(window).height();
+  var dh = wh - ch;
+  if (dh <= 0) {
+    return;
+  }
+  outbox.height(outbox.height() + Math.floor(dh / 2));
+  input.height(input.height() + Math.floor(dh / 3));
+}
+
+function loadCustomContent() {
+  var refpos = location.href.search('#') + 1;
+  if (refpos == 0) {
+    return false;
+  }
+  var url = decodeURIComponent(location.href.substring(refpos));
+  $.get(url, function(text) {
+    var parts = text.split('+++');
+    $('h1').text(parts[0]);
+    $('#foreword').removeClass('hint').html(parts[1]);
+    if (!schemeInitialized) {
+      window.customInitScheme = parts[2];
+    } else {
+      schemeExec(parts[2]);
+    }
+    adjustHeights();
+  }, 'text');
+  return true;
+}
+var stdinBuffer = '';
+var outputBuffer = '';
+var errorBuffer = '';
+
+Module.noInitialRun = true;
+
+Module.preRun = function() {
+    function stdin() {
+        if (stdinBuffer.length > 0) {
+            var ltr = stdinBuffer.charCodeAt(0);
+            stdinBuffer = stdinBuffer.substring(1);
+            return ltr;
+        } else {
+            return null;
+        }
+    }
+    function stdout(code) {
+        if (code == 10 || code == 13) {
+            doOutput(outputBuffer + '\n');
+            outputBuffer = '';
+        } else {
+            outputBuffer += String.fromCharCode(code);
+        }
+    }
+    function stderr(code) {
+        if (code == 10 || code == 13) {
+            doOutput('STDERR: ' + errorBuffer + '\n');
+            errorBuffer = '';
+        } else {
+            errorBuffer += String.fromCharCode(code);
+        }
+    }
+    FS.init(stdin, stdout, stderr);
+}
+
+var bodyReady = false, runtimeInitialized = false;
+
+function doInit() {
+    if (!bodyReady || !runtimeInitialized) {
+        return;
+    }
+    if (!loadCustomContent()) {
+        adjustHeights();
+    }
+    Module.ccall('shmain', 'number', [], [], {async: true});
+}
+
+Module.onRuntimeInitialized = function(){
+    runtimeInitialized = true;
+    doInit();
+};
+
+$('body').ready(function() {
+  bodyReady = true;
+  doInit();
+});
+
+</script>
+
+</body>
+</html>
+
