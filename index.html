@@ -80,23 +80,25 @@ function adjustHeights() {
   input.height(input.height() + Math.floor(dh / 3));
 }
 
+function onCustomContentLoaded(text) {
+    var parts = text.split('+++');
+    if (parts.length > 1) {
+        $('h1').text(parts.shift());
+    }
+    if (parts.length > 1) {
+        $('#foreword').removeClass('hint').html(parts.shift());
+    }
+    FS.writeFile('/init.lua', parts[0]);
+    adjustHeights();
+}
+
 function loadCustomContent() {
   var refpos = location.href.search('#') + 1;
   if (refpos == 0) {
     return false;
   }
   var url = decodeURIComponent(location.href.substring(refpos));
-  $.get(url, function(text) {
-    var parts = text.split('+++');
-    $('h1').text(parts[0]);
-    $('#foreword').removeClass('hint').html(parts[1]);
-    if (!schemeInitialized) {
-      window.customInitScheme = parts[2];
-    } else {
-      schemeExec(parts[2]);
-    }
-    adjustHeights();
-  }, 'text');
+  $.ajax({url: url, success: onCustomContentLoaded, async: false});
   return true;
 }
 var stdinBuffer = '';

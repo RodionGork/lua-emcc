@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <emscripten.h>
 
 volatile char fgetsReady = 0;
@@ -77,5 +78,9 @@ int main(int argc, char** argv);
 
 int shmain(void) {
     char* argv[] = {"lua"};
-    return main(1, argv);
+    char* argvExt[] = {"lua", "-i", "/init.lua"};
+    if (access("/init.lua", F_OK) != 0) {
+        return main(1, argv);
+    }
+    return main(3, argvExt);
 }
