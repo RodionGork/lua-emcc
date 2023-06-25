@@ -98,7 +98,11 @@ function loadCustomContent() {
     return false;
   }
   var url = decodeURIComponent(location.href.substring(refpos));
-  $.ajax({url: url, success: onCustomContentLoaded, async: false});
+  if (url.substring(0, 4) == 'b64:') {
+    onCustomContentLoaded(atob(url.substring(4)));
+  } else {
+    $.ajax({url: url, success: onCustomContentLoaded, async: false});
+  }
   return true;
 }
 var stdinBuffer = '';
