@@ -19,7 +19,7 @@
       font-size: 150%;
       margin: 10px 0px;
     }
-    #input {
+    #input, #prerun {
       width: 100%;
       margin: 10px 0px;
       font-size: 125%;
@@ -28,6 +28,9 @@
     .hint {
       color: #444;
       font-style: italic;
+    }
+    .hidden {
+      display: none;
     }
   </style>
 </head>
@@ -41,7 +44,17 @@
     &nbsp;|&nbsp;
     <input id="autoclear" type="checkbox" checked="true">auto-clear command box</input>
     &nbsp;|&nbsp;
+    <input id="echo" type="checkbox" checked="true">echo input</input>
+    &nbsp;|&nbsp;
     <a href="#" onclick="doClear(); return false">clear output</a>
+    &nbsp;|&nbsp;
+    <a href="#" onclick="showAdvanced(); return false">advanced...</a>
+    <div id="advanced" class="hidden">
+      <hr/>
+      <button onclick="genLink()">create link to run the code below</button>
+      <span id="genlink"></span>
+      <textarea id="prerun" placeholder="code or url to raw gist"></textarea>
+    </div>
   </div>
 <script>
 
@@ -49,7 +62,6 @@ var cnt = 0;
 
 var outbox = $('#outbox');
 var input = $('#input');
-var schemeInitialized = false;
 
 function doOutput(text) {
   outbox.val(outbox.val() + text);
@@ -59,9 +71,25 @@ function doClear() {
   outbox.val('');
 }
 
+function showAdvanced() {
+  $('#advanced').removeClass('hidden');
+  $('#prerun').focus();
+}
+
+function genLink() {
+  var data = $('#prerun').val();
+  if (data.substring(0, 4) != 'http') {
+    data = 'b64:' + btoa(data);
+  }
+  var url = location.href.replace(/#.*/, '') + '#' + data;
+$('#genlink').html('<a href="' + url + '" target="_blank">click me</a>');
+}
+
 function doExecute() {
   var line = input.val();
-  doOutput('> ' + line + '\n');
+  if ($('#echo').prop('checked')) {
+    doOutput('> ' + line + '\n');
+  }
   Module.ccall('passInput', null, ['string'], [line]);
   outbox.scrollTop = outbox.scrollHeight;
   if ($('#autoclear').prop('checked')) {
@@ -94,7 +122,7 @@ function onCustomContentLoaded(text) {
 
 function loadCustomContent() {
   var refpos = location.href.search('#') + 1;
-  if (refpos == 0) {
+  if (refpos == 0 || location.href.length - refpos < 4) {
     return false;
   }
   var url = decodeURIComponent(location.href.substring(refpos));
@@ -112,15 +140,6 @@ var errorBuffer = '';
 Module.noInitialRun = true;
 
 Module.preRun = function() {
-    function stdin() {
-        if (stdinBuffer.length > 0) {
-            var ltr = stdinBuffer.charCodeAt(0);
-            stdinBuffer = stdinBuffer.substring(1);
-            return ltr;
-        } else {
-            return null;
-        }
-    }
     function stdout(code) {
         if (code == 10 || code == 13) {
             doOutput(outputBuffer + '\n');
@@ -137,12 +156,13 @@ Module.preRun = function() {
             errorBuffer += String.fromCharCode(code);
         }
     }
-    FS.init(stdin, stdout, stderr);
+    FS.init(()=>null, stdout, stderr);
 }
 
 var bodyReady = false, runtimeInitialized = false;
 
 function doInit() {
+    doClear();
     if (!bodyReady || !runtimeInitialized) {
         return;
     }
@@ -166,4 +186,3 @@ $('body').ready(function() {
 
 </body>
 </html>
-
