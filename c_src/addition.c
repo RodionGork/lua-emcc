@@ -79,8 +79,12 @@ int main(int argc, char** argv);
 int shmain(void) {
     char* argv[] = {"lua"};
     char* argvExt[] = {"lua", "-i", "/init.lua"};
-    if (access("/init.lua", F_OK) != 0) {
-        return main(1, argv);
+    char* argvPrg[] = {"lua", "prog.lua"};
+    if (access("/init.lua", F_OK) == 0) {
+        return main(3, argvExt);
     }
-    return main(3, argvExt);
+    if (access("/prog.lua", F_OK) == 0) {
+        return main(2, argvPrg);
+    }
+    return main(1, argv);
 }
