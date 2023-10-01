@@ -69,6 +69,7 @@ void passInput(char* s) {
     int i = 0;
     if (s == NULL) {
         getcPtr = 0;
+        fgetsReady = 0;
         return;
     }
     while (1) {
@@ -92,7 +93,7 @@ int shmain(void) {
     char* argv[] = {"lua"};
     char* argvExt[] = {"lua", "-i", "/init.lua"};
     char* argvPrg[] = {"lua", "prog.lua"};
-    getcPtr = 0;
+    passInput(NULL);
     if (access("/init.lua", F_OK) == 0) {
         return main(3, argvExt);
     }
