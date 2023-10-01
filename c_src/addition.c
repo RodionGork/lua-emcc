@@ -31,7 +31,7 @@ int getc_unlocked(FILE* f) {
     while (1) {
         char c = fgetsBuf[i];
         getcBuf[i] = c;
-        if (c == 0) {
+        if (c == 0 || i >= (int)sizeof(getcBuf) - 2) {
             getcBuf[i] = '\n';
             getcBuf[i + 1] = 0;
             break;
@@ -69,6 +69,7 @@ void passInput(char* s) {
     int i = 0;
     if (s == NULL) {
         getcPtr = 0;
+        getcBuf[0] = 0;
         fgetsReady = 0;
         return;
     }
@@ -89,11 +90,13 @@ int isatty(int id) {
 
 int main(int argc, char** argv);
 
+//input buffer is not intentionally cleared on (re)start
+//this allows to set it before execution
+//if necessary, call passInput(NULL) beforehand
 int shmain(void) {
     char* argv[] = {"lua"};
     char* argvExt[] = {"lua", "-i", "/init.lua"};
     char* argvPrg[] = {"lua", "prog.lua"};
-    passInput(NULL);
     if (access("/init.lua", F_OK) == 0) {
         return main(3, argvExt);
     }
