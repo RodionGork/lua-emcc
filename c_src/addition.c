@@ -7,13 +7,21 @@ volatile char fgetsBuf[1024];
 char getcBuf[1024] = {0};
 int getcPtr = 0;
 
+int getcBufNext() {
+    int c = getcBuf[getcPtr];
+    if (getcPtr < (int)sizeof(getcBuf) - 1) {
+        getcPtr++;
+    }
+    return c;
+}
+
 int getc_unlocked(FILE* f) {
     int i;
     if (f != stdin) {
         return -1;
     }
     if (getcBuf[getcPtr]) {
-        return getcBuf[getcPtr++];
+        return getcBufNext();
     }
     getcPtr = 0;
     while (!fgetsReady) {
@@ -31,7 +39,7 @@ int getc_unlocked(FILE* f) {
         i += 1;
     }
     fgetsReady = 0;
-    return getcBuf[getcPtr++];
+    return getcBufNext();
 }
 
 char* fgets(char* s, int num, FILE* f) {
@@ -59,6 +67,10 @@ char* fgets(char* s, int num, FILE* f) {
 
 void passInput(char* s) {
     int i = 0;
+    if (s == NULL) {
+        getcPtr = 0;
+        return;
+    }
     while (1) {
         char c = s[i];
         fgetsBuf[i] = c;
@@ -80,6 +92,7 @@ int shmain(void) {
     char* argv[] = {"lua"};
     char* argvExt[] = {"lua", "-i", "/init.lua"};
     char* argvPrg[] = {"lua", "prog.lua"};
+    getcPtr = 0;
     if (access("/init.lua", F_OK) == 0) {
         return main(3, argvExt);
     }
