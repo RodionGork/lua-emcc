@@ -1,0 +1,54 @@
+<center>
+<h1>Example #2</h2>
+<h3>Pass input after start (asynchronous flow)</h3>
+<input id="input" placeholder="Enter number"/>
+<br/><br/>
+<button onclick="runLua1()">Start Lua</button>
+<button onclick="runLua2()">Pass Input</button>
+<br/><br/>
+<input disabled="1" id="output" placeholder="answer"/>
+
+<script src="./lua.js"></script>
+
+<script>
+var code =`
+print('started, ')
+x = io.read('*n')
+print(x, 'squared', x * x)
+io.stderr:write('test stderr printing, see console.log\\n')
+`;
+
+Module.noInitialRun = true;
+
+Module.preRun = function() {
+    var errbuf = '';
+    function stdout(code) {
+        var out = document.getElementById('output');
+        out.value += String.fromCharCode(code);
+    }
+    function stderr(code) {
+        if (code == 10 || code == 13) {
+            console.log(errbuf);
+            errbuf = '';
+        } else {
+            errbuf += String.fromCharCode(code);
+        }
+    }
+    FS.init(()=>null, stdout, stderr);
+}
+
+Module.onRuntimeInitialized = function(){
+    FS.writeFile('/prog.lua', code);
+}
+
+function runLua1() {
+    Module.ccall('shmain', 'number', [], []);
+    console.log('shmain call completed');
+}
+
+function runLua2() {
+    var inp = document.getElementById('input').value;
+    Module.ccall('passInput', null, ['string'], [inp]);
+}
+
+</script>

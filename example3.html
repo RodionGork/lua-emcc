@@ -1,0 +1,42 @@
+<center>
+<h1>Example #3</h2>
+<h3>Start Lua on page load to work continuously,<br/>then pass input multiple times</h3>
+<input id="input" placeholder="Enter number"/>
+<br/><br/>
+<button onclick="runLua2()">Add the number</button>
+<br/><br/>
+<textarea disabled="1" rows="10" id="output" placeholder="answer"></textarea>
+
+<script src="./lua.js"></script>
+
+<script>
+var code =`
+sum = 0
+while true do
+  x = io.read('*n')
+  sum = sum + x
+  print('Sum is now', sum)
+end
+`;
+
+Module.noInitialRun = true;
+
+Module.preRun = function() {
+    function stdout(code) {
+        var out = document.getElementById('output');
+        out.value += String.fromCharCode(code);
+    }
+    FS.init(()=>null, stdout, (code)=>null);
+}
+
+Module.onRuntimeInitialized = function(){
+    FS.writeFile('/prog.lua', code);
+    Module.ccall('shmain', 'number', [], []);
+}
+
+function runLua2() {
+    var inp = document.getElementById('input').value;
+    Module.ccall('passInput', null, ['string'], [inp]);
+}
+
+</script>

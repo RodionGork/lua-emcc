@@ -1,0 +1,49 @@
+<center>
+<h1>Example #1</h1>
+<h3>Prepare input before start (synchronous flow)</h3>
+<input id="input" placeholder="Enter number"/>
+<br/><br/>
+<button onclick="runLua1()">Run Lua to calculate Square</button>
+<br/><br/>
+<input disabled="1" id="output" placeholder="answer"/>
+
+<script src="./lua.js"></script>
+
+<script>
+var code =`
+x = io.read('*n')
+print(x, 'squared', x * x)
+io.stderr:write('test stderr printing, see console.log\\n')
+`;
+
+Module.noInitialRun = true;
+
+Module.preRun = function() {
+    var errbuf = '';
+    function stdout(code) {
+        var out = document.getElementById('output');
+        out.value += String.fromCharCode(code);
+    }
+    function stderr(code) {
+        if (code == 10 || code == 13) {
+            console.log(errbuf);
+            errbuf = '';
+        } else {
+            errbuf += String.fromCharCode(code);
+        }
+    }
+    FS.init(()=>null, stdout, stderr);
+}
+
+Module.onRuntimeInitialized = function() {
+    FS.writeFile('/prog.lua', code);
+}
+
+function runLua1() {
+    var inp = document.getElementById('input').value;
+    Module.ccall('passInput', null, ['string'], [inp]);
+    Module.ccall('shmain', 'number', [], []);
+    console.log('shmain call completed');
+}
+
+</script>
