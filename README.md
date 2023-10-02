@@ -8,7 +8,10 @@ code to run into the url, thus serving as simplified Lua "Fiddle".
 
 ## Using in Your project
 
-**Include javascript file**, make sure wasm is accessible (it is called indirectly):
+Don't get afraid of the following verbose explanations - actually they are just about ten lines of code, as you
+can see in examples included here :)
+
+Begin by **Including javascript file**, make sure wasm is accessible (it is called indirectly):
 
     <script src="./lua.js"></script>
     <!-- lua.wasm should exist at this place also>
