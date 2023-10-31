@@ -40,7 +40,7 @@
     <div id="foreword" class="hint">Compiled from Lua sources to JavaScript using EMCC</div>
     <textarea id="outbox" disabled="true"></textarea>
     <textarea id="input" placeholder="your input>"></textarea><br/>
-    <button onclick="doExecute()">Execute</button>
+    <button onclick="doExecute()">Execute (ctrl-enter)</button>
     &nbsp;|&nbsp;
     <input id="autoclear" type="checkbox" checked="true">auto-clear command box</input>
     &nbsp;|&nbsp;
@@ -65,6 +65,7 @@ var input = $('#input');
 
 function doOutput(text) {
   outbox.val(outbox.val() + text);
+  outbox.get(0).scrollTop = outbox.get(0).scrollHeight;
 }
 
 function doClear() {
@@ -91,7 +92,7 @@ function doExecute() {
     doOutput('> ' + line + '\n');
   }
   Module.ccall('passInput', null, ['string'], [line]);
-  outbox.scrollTop = outbox.scrollHeight;
+  outbox.get(0).scrollTop = outbox.get(0).scrollHeight;
   if ($('#autoclear').prop('checked')) {
     input.val('');
   }
@@ -180,6 +181,14 @@ Module.onRuntimeInitialized = function(){
 $('body').ready(function() {
   bodyReady = true;
   doInit();
+});
+
+$('textarea#input').keydown(function (e) {
+    if (e.keyCode == 13) {
+        if (e.ctrlKey) {
+            doExecute();
+        }
+    }
 });
 
 </script>

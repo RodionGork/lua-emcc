@@ -102,6 +102,13 @@ calls with this small magic:_
 
     Module.ccall('passInput', null, ['string'], [null]);
 
+There are two ways of direct interaction with javascript environment - `os.execute` will
+run any javascript statement, while `os.getenv` allows retrieving variables (only
+works when first letter of the variable name is in lowercase):
+
+    os.execute('alert("Hello, People!")')
+    os.getenv('document.title')
+
 **That's all** - despite it is just 3 actions (setting output function, passing input and
 starting the interpreter) - great things could be done. Look for reference at the
 [Space Invaders puzzle](https://www.codeabbey.com/index/task_view/space-invaders) with

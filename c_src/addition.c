@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include <emscripten.h>
 
+#define INPUT_SLEEP 20
+
 volatile char fgetsReady = 0;
 volatile char fgetsBuf[1024];
 char getcBuf[1024] = {0};
@@ -25,7 +27,7 @@ int getc_unlocked(FILE* f) {
     }
     getcPtr = 0;
     while (!fgetsReady) {
-        emscripten_sleep(50);
+        emscripten_sleep(INPUT_SLEEP);
     }
     i = 0;
     while (1) {
@@ -49,7 +51,7 @@ char* fgets(char* s, int num, FILE* f) {
         return s;
     }
     while (!fgetsReady) {
-        emscripten_sleep(50);
+        emscripten_sleep(INPUT_SLEEP);
     }
     while (1) {
         char c = fgetsBuf[i];
@@ -82,6 +84,19 @@ void passInput(char* s) {
         i += 1;
     }
     fgetsReady = 1;
+}
+
+int system(const char* cmd) {
+    if (cmd[0] == '#' && cmd[1] == 'd') {
+        emscripten_sleep(atoi(cmd + 2));
+        return 0;
+    }
+    return emscripten_run_script_int(cmd);
+}
+
+char* getenv(const char* name) {
+    if (name[0] <= 'Z') return NULL;
+    return emscripten_run_script_string(name);
 }
 
 int isatty(int id) {
