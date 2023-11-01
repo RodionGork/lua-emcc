@@ -1,0 +1,74 @@
+<center>
+<h1>Example #4</h2>
+<h3>Drawing on the Canvas</h3>
+
+<canvas id="canvas1" style="border:1px solid gray" width="400" height="300"></canvas>
+<br/><br/>
+<button onclick="runLua()">Run the code</button>
+<br/><br/>
+<textarea rows="16" cols="70" id="input" placeholder="your code">require "graph"
+
+colors = {'#0f0', '#f00', '#ee0', '#00f', '#0ee', '#e0e', '#f70'}
+
+graph.init('canvas1')
+
+graph.rect(0, 0, graph.w, graph.h, '#fff')
+
+for i = 1, 15 do
+  x = math.floor(math.random() * (graph.w - 100))
+  y = math.floor(math.random() * (graph.h - 100))
+  c = math.floor(math.random() * #colors) + 1
+  graph.rect(x, y, 100, 100, colors[c])
+  graph.delay(300) -- milliseconds
+end
+</textarea>
+<script src="./lua.js"></script>
+
+<script>
+var code =`
+graph = {}
+graph.init = function(name)
+  if name ~= nil then
+    os.execute(string.format('cnv1 = document.getElementById("%s")', name))
+  else
+    os.execute('cnv1 = document.getElementByTagName("canvas")[0]')
+  end
+  local wh = os.getenv('cnv1.width * 10000 + cnv1.height')
+  graph.w = wh // 10000;
+  graph.h = wh % 10000;
+  print(graph.w, graph.h)
+  os.execute('ctx1 = cnv1.getContext("2d")')
+end
+graph.rect = function(x,y,w,h,style)
+  os.execute(string.format('ctx1.fillStyle = "%s"; ctx1.fillRect(%d,%d,%d,%d)', style, x, y, w, h))
+end
+graph.delay = function(n)
+  os.execute('#d' .. n)
+end
+`;
+
+Module.noInitialRun = true;
+
+Module.preRun = function() {
+	var output = '';
+    function stdout(code) {
+        output += String.fromCharCode(code);
+        if (code == 10) {
+        	console.log(output);
+        	output = '';
+        }
+    }
+    FS.init(()=>null, stdout, stdout);
+}
+
+Module.onRuntimeInitialized = function(){
+    FS.writeFile('graph.lua', code);
+}
+
+function runLua() {
+    FS.writeFile('prog.lua', document.getElementById('input').value);
+    retCode = Module.ccall('shmain', 'number', [], []);
+    console.log('retcode: ' + retCode);
+}
+
+</script>
