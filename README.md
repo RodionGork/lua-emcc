@@ -6,6 +6,8 @@ Lua code in webpages and making interaction to it.
 Demo: [Lua 5.4.6 Sanbox in your browser](https://rodiongork.github.io/lua-emcc) - it also allows embedding
 code to run into the url, thus serving as simplified Lua "Fiddle".
 
+Also check [Example #4 - drawing on Canvas](https://rodiongork.github.io/lua-emcc/example4.html)
+
 ## Using in Your project
 
 Don't get afraid of the following verbose explanations - actually they are just about ten lines of code, as you
@@ -76,10 +78,11 @@ function in the onclick event:
 
 We have `shmain` and `passInput` functions to manipulate lua. In this first example
 input is prepared before the program started, so it could execute in "one-shot".
-See **Example #1**.
+See [Example #1](https://rodiongork.github.io/lua-emcc/example1.html).
 
 Alternatively this can be done asynchronously, e.g. one button starts Lua, another
-provides input when it is ready (perhaps, multiple times on user's action) - see **Example #2**:
+provides input when it is ready (perhaps, multiple times on user's action) - see
+[Example #2](https://rodiongork.github.io/lua-emcc/example2.html):
 
     <button onclick="runLua()">Run Lua</button>
     <button onclick="sendLuaData()">Pass Input</button>
@@ -94,7 +97,7 @@ provides input when it is ready (perhaps, multiple times on user's action) - see
     }
 
 In this way you may have a kind of "asynchronous" web-page with Lua processing data
-for it in a loop. See **Example #3**
+for it in a loop. See [Example #3](https://rodiongork.github.io/lua-emcc/example3.html).
 
 _In some cases you may want to repeatedly call `shmain` - remember to clear it's input
 buffer (unless you want to process what is prepared here intentionally) on any consecutive

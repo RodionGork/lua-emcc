@@ -4,24 +4,27 @@
 
 <canvas id="canvas1" style="border:1px solid gray" width="400" height="300"></canvas>
 <br/><br/>
-<button onclick="runLua()">Run the code</button>
+<button onclick="runLua()">(re-)Run the code</button>
 <br/><br/>
 <textarea rows="16" cols="70" id="input" placeholder="your code">require "graph"
 
-colors = {'#0f0', '#f00', '#ee0', '#00f', '#0ee', '#e0e', '#f70'}
+graph.init()
+graph.rect(0, 0, graph.w, graph.h, '#fff') -- clear
 
-graph.init('canvas1')
-
-graph.rect(0, 0, graph.w, graph.h, '#fff')
-
-for i = 1, 15 do
-  x = math.floor(math.random() * (graph.w - 100))
-  y = math.floor(math.random() * (graph.h - 100))
-  c = math.floor(math.random() * #colors) + 1
-  graph.rect(x, y, 100, 100, colors[c])
-  graph.delay(300) -- milliseconds
+for i = 1, 50 do
+  w = math.random(100) + 10
+  h = math.random(100) + 10
+  x = math.random(graph.w - w)
+  y = math.random(graph.h - h)
+  color = string.format('rgb(%d,%d,%d)',
+    math.random(255), math.random(255), math.random(255))
+  graph.rect(x, y, w, h, color)
+  graph.delay(50) -- milliseconds
 end
 </textarea>
+<br/><br/>
+<a href="https://github.com/rodiongork/lua-emcc">back to Lua-EMCC project</a>
+
 <script src="./lua.js"></script>
 
 <script>
@@ -31,7 +34,7 @@ graph.init = function(name)
   if name ~= nil then
     os.execute(string.format('cnv1 = document.getElementById("%s")', name))
   else
-    os.execute('cnv1 = document.getElementByTagName("canvas")[0]')
+    os.execute('cnv1 = document.getElementsByTagName("canvas")[0]')
   end
   local wh = os.getenv('cnv1.width * 10000 + cnv1.height')
   graph.w = wh // 10000;
