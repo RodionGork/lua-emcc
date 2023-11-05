@@ -110,10 +110,10 @@ int main(int argc, char** argv);
 //if necessary, call passInput(NULL) beforehand
 int shmain(void) {
     char* argv[] = {"lua"};
-    char* argvExt[] = {"lua", "-i", "/init.lua"};
+    char* argvExt[] = {"lua", "-e", "dofile('/init.lua')", "prog.lua"};
     char* argvPrg[] = {"lua", "prog.lua"};
     if (access("/init.lua", F_OK) == 0) {
-        return main(3, argvExt);
+        return main(4, argvExt);
     }
     if (access("/prog.lua", F_OK) == 0) {
         return main(2, argvPrg);
