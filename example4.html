@@ -11,6 +11,8 @@
 graph.init()
 graph.rect(0, 0, graph.w, graph.h, '#fff') -- clear
 
+colorPrev = 'white'
+
 for i = 1, 50 do
   w = math.random(100) + 10
   h = math.random(100) + 10
@@ -19,6 +21,9 @@ for i = 1, 50 do
   color = string.format('rgb(%d,%d,%d)',
     math.random(255), math.random(255), math.random(255))
   graph.rect(x, y, w, h, color)
+  graph.color(colorPrev)
+  graph.line(x, y, x+w, y+h)
+  colorPrev = color
   graph.delay(50) -- milliseconds
 end
 </textarea>
@@ -40,10 +45,16 @@ graph.init = function(name)
   graph.w = wh // 10000;
   graph.h = wh % 10000;
   print(graph.w, graph.h)
-  os.execute('ctx1 = cnv1.getContext("2d")')
+  os.execute('ctx1 = cnv1.getContext("2d");ctx1.lineWidth=2;')
 end
 graph.rect = function(x,y,w,h,style)
   os.execute(string.format('ctx1.fillStyle = "%s"; ctx1.fillRect(%d,%d,%d,%d)', style, x, y, w, h))
+end
+graph.color = function(c)
+  os.execute(string.format('ctx1.strokeStyle = "%s";', c))
+end
+graph.line = function(x1, y1, x2, y2)
+  os.execute(string.format('ctx1.beginPath();ctx1.moveTo(%d,%d);ctx1.lineTo(%d,%d);ctx1.stroke();', x1, y1, x2, y2));
 end
 graph.delay = function(n)
   os.execute('#d' .. n)
