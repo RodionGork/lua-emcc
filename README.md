@@ -3,7 +3,7 @@
 Lua compiled to JavaScript with EmScripten / EMCC - may be easily used for executing some
 Lua code in webpages and making interaction to it.
 
-Demo: [Lua 5.4.6 Sanbox in your browser](https://rodiongork.github.io/lua-emcc) - it also allows embedding
+Demo: [**Lua Sanbox in your browser**](https://rodiongork.github.io/lua-emcc) - it also allows embedding
 code to run into the url, thus serving as simplified Lua "Fiddle".
 
 Also check [Example #4 - drawing on Canvas](https://rodiongork.github.io/lua-emcc/example4.html)
