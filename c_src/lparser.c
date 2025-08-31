@@ -30,7 +30,7 @@
 
 
 
-/* maximum number of variable declarationss per function (must be
+/* maximum number of variable declarations per function (must be
    smaller than 250, due to the bytecode format) */
 #define MAXVARS		200
 
@@ -197,7 +197,7 @@ static int new_varkind (LexState *ls, TString *name, lu_byte kind) {
   Dyndata *dyd = ls->dyd;
   Vardesc *var;
   luaM_growvector(L, dyd->actvar.arr, dyd->actvar.n + 1,
-             dyd->actvar.size, Vardesc, SHRT_MAX, "variable declarationss");
+             dyd->actvar.size, Vardesc, SHRT_MAX, "variable declarations");
   var = &dyd->actvar.arr[dyd->actvar.n++];
   var->vd.kind = kind;  /* default */
   var->vd.name = name;
@@ -485,6 +485,20 @@ static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
 }
 
 
+static void buildglobal (LexState *ls, TString *varname, expdesc *var) {
+  FuncState *fs = ls->fs;
+  expdesc key;
+  init_exp(var, VGLOBAL, -1);  /* global by default */
+  singlevaraux(fs, ls->envn, var, 1);  /* get environment variable */
+  if (var->k == VGLOBAL)
+    luaK_semerror(ls, "_ENV is global when accessing variable '%s'",
+                      getstr(varname));
+  luaK_exp2anyregup(fs, var);  /* _ENV could be a constant */
+  codestring(&key, varname);  /* key is variable name */
+  luaK_indexed(fs, var, &key);  /* 'var' represents _ENV[varname] */
+}
+
+
 /*
 ** Find a variable with the given name 'n', handling global variables
 ** too.
@@ -494,18 +508,11 @@ static void buildvar (LexState *ls, TString *varname, expdesc *var) {
   init_exp(var, VGLOBAL, -1);  /* global by default */
   singlevaraux(fs, varname, var, 1);
   if (var->k == VGLOBAL) {  /* global name? */
-    expdesc key;
     int info = var->u.info;
     /* global by default in the scope of a global declaration? */
     if (info == -2)
       luaK_semerror(ls, "variable '%s' not declared", getstr(varname));
-    singlevaraux(fs, ls->envn, var, 1);  /* get environment variable */
-    if (var->k == VGLOBAL)
-      luaK_semerror(ls, "_ENV is global when accessing variable '%s'",
-                        getstr(varname));
-    luaK_exp2anyregup(fs, var);  /* but could be a constant */
-    codestring(&key, varname);  /* key is variable name */
-    luaK_indexed(fs, var, &key);  /* env[varname] */
+    buildglobal(ls, varname, var);
     if (info != -1 && ls->dyd->actvar.arr[info].vd.kind == GDKCONST)
       var->u.ind.ro = 1;  /* mark variable as read-only */
     else  /* anyway must be a global */
@@ -665,7 +672,7 @@ static void createlabel (LexState *ls, TString *name, int line, int last) {
 
 
 /*
-** Traverse the pending goto's of the finishing block checking whether
+** Traverse the pending gotos of the finishing block checking whether
 ** each match some label of that block. Those that do not match are
 ** "exported" to the outer block, to be solved there. In particular,
 ** its 'nactvar' is updated with the level of the inner block,
@@ -1300,6 +1307,15 @@ static BinOpr getbinopr (int op) {
   }
 }
 
+static const int compound[] =
+  {'+', '-', '*', '%', '^', '/', TK_IDIV, '&', '|', '~', TK_SHL, TK_SHR, TK_CONCAT};
+
+static int iscompassign(int tkn) {
+  for (unsigned int i = 0; i < sizeof(compound) / sizeof(*compound); i++)
+    if (compound[i] == tkn)
+      return 1;
+  return 0;
+}
 
 /*
 ** Priority table for binary operators.
@@ -1330,6 +1346,7 @@ static const struct {
 static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
   BinOpr op;
   UnOpr uop;
+  int prio;
   enterlevel(ls);
   uop = getunopr(ls->t.token);
   if (uop != OPR_NOUNOPR) {  /* prefix (unary) operator? */
@@ -1341,6 +1358,7 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
   else simpleexp(ls, v);
   /* expand while operators have priorities higher than 'limit' */
   op = getbinopr(ls->t.token);
+  prio = limit >= 0 ? priority[op].right : 0;
   while (op != OPR_NOBINOPR && priority[op].left > limit) {
     expdesc v2;
     BinOpr nextop;
@@ -1348,9 +1366,10 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
     luaX_next(ls);  /* skip operator */
     luaK_infix(ls->fs, op, v);
     /* read sub-expression with higher priority */
-    nextop = subexpr(ls, &v2, priority[op].right);
+    nextop = subexpr(ls, &v2, prio);
     luaK_posfix(ls->fs, op, v, &v2, line);
     op = nextop;
+    prio = priority[op].right;
   }
   leavelevel(ls);
   return op;  /* return first untreated operator */
@@ -1435,6 +1454,15 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
   }
 }
 
+
+/* Create code to store the "top" register in 'var' */
+static void storevartop (FuncState *fs, expdesc *var) {
+  expdesc e;
+  init_exp(&e, VNONRELOC, fs->freereg - 1);
+  luaK_storevar(fs, var, &e);  /* will also free the top register */
+}
+
+
 /*
 ** Parse and compile a multiple assignment. The first "variable"
 ** (a 'suffixedexp') was already read by the caller.
@@ -1468,10 +1496,23 @@ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
       return;  /* avoid default */
     }
   }
-  init_exp(&e, VNONRELOC, ls->fs->freereg-1);  /* default assignment */
-  luaK_storevar(ls->fs, &lh->v, &e);
+  storevartop(ls->fs, &lh->v);  /* default assignment */
 }
 
+static void amendassign (LexState *ls, struct LHS_assign *lh) {
+  expdesc v;
+  Token opToken = ls->t;
+  luaX_next(ls);
+  check(ls, '=');
+  check_condition(ls, vkisvar(lh->v.k), "syntax error");
+  check_readonly(ls, &lh->v);
+  ls->t = ls->record[0];
+  ls->recptr = 1;
+  ls->record[ls->reccnt-1] = opToken;
+  subexpr(ls, &v, -1);
+  luaK_setoneret(ls->fs, &v);
+  luaK_storevar(ls->fs, &lh->v, &v);
+}
 
 static int cond (LexState *ls) {
   /* cond -> exp */
@@ -1821,24 +1862,44 @@ static lu_byte getglobalattribute (LexState *ls, lu_byte df) {
 }
 
 
+static void globalnames (LexState *ls, lu_byte defkind) {
+  FuncState *fs = ls->fs;
+  int nvars = 0;
+  int lastidx;  /* index of last registered variable */
+  do {  /* for each name */
+    TString *vname = str_checkname(ls);
+    lu_byte kind = getglobalattribute(ls, defkind);
+    lastidx = new_varkind(ls, vname, kind);
+    nvars++;
+  } while (testnext(ls, ','));
+  if (testnext(ls, '=')) {  /* initialization? */
+    expdesc e;
+    int i;
+    int nexps = explist(ls, &e);  /* read list of expressions */
+    adjust_assign(ls, nvars, nexps, &e);
+    for (i = 0; i < nvars; i++) {  /* for each variable */
+      expdesc var;
+      TString *varname = getlocalvardesc(fs, lastidx - i)->vd.name;
+      buildglobal(ls, varname, &var);  /* create global variable in 'var' */
+      storevartop(fs, &var);
+    }
+  }
+  fs->nactvar = cast_short(fs->nactvar + nvars);  /* activate declaration */
+}
+
+
 static void globalstat (LexState *ls) {
   /* globalstat -> (GLOBAL) attrib '*'
      globalstat -> (GLOBAL) attrib NAME attrib {',' NAME attrib} */
   FuncState *fs = ls->fs;
   /* get prefixed attribute (if any); default is regular global variable */
   lu_byte defkind = getglobalattribute(ls, GDKREG);
-  if (testnext(ls, '*')) {
+  if (!testnext(ls, '*'))
+    globalnames(ls, defkind);
+  else {
     /* use NULL as name to represent '*' entries */
     new_varkind(ls, NULL, defkind);
     fs->nactvar++;  /* activate declaration */
-  }
-  else {
-    do {  /* list of names */
-      TString *vname = str_checkname(ls);
-      lu_byte kind = getglobalattribute(ls, defkind);
-      new_varkind(ls, vname, kind);
-      fs->nactvar++;  /* activate declaration */
-    } while (testnext(ls, ','));
   }
 }
 
@@ -1850,7 +1911,7 @@ static void globalfunc (LexState *ls, int line) {
   TString *fname = str_checkname(ls);
   new_varkind(ls, fname, GDKREG);  /* declare global variable */
   fs->nactvar++;  /* enter its scope */
-  buildvar(ls, fname, &var);
+  buildglobal(ls, fname, &var);
   body(ls, &b, 0, ls->linenumber);  /* compile and return closure in 'b' */
   luaK_storevar(fs, &var, &b);
   luaK_fixline(fs, line);  /* definition "happens" in the first line */
@@ -1898,10 +1959,16 @@ static void exprstat (LexState *ls) {
   /* stat -> func | assignment */
   FuncState *fs = ls->fs;
   struct LHS_assign v;
+  luaX_record(ls, 1);
   suffixedexp(ls, &v.v);
+  luaX_record(ls, 0);
   if (ls->t.token == '=' || ls->t.token == ',') { /* stat -> assignment ? */
     v.prev = NULL;
     restassign(ls, &v, 1);
+  }
+  else if (iscompassign(ls->t.token)) {
+    v.prev = NULL;
+    amendassign(ls, &v);
   }
   else {  /* stat -> func */
     Instruction *inst;
@@ -2068,6 +2135,9 @@ LClosure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
   LexState lexstate;
   FuncState funcstate;
   LClosure *cl = luaF_newLclosure(L, 1);  /* create main closure */
+  lexstate.reccnt = 0;
+  lexstate.L = L;
+  lexstate.record = luaM_newvector(L, lexstate.recmax=8, Token);
   setclLvalue2s(L, L->top.p, cl);  /* anchor it (to avoid being collected) */
   luaD_inctop(L);
   lexstate.h = luaH_new(L);  /* create table for scanner */
