@@ -110,13 +110,19 @@ int main(int argc, char** argv);
 //if necessary, call passInput(NULL) beforehand
 int shmain(void) {
     char* argv[] = {"lua"};
-    char* argvExt[] = {"lua", "-e", "dofile('/init.lua')", "prog.lua"};
-    char* argvPrg[] = {"lua", "prog.lua"};
-    if (access("/init.lua", F_OK) == 0) {
-        return main(4, argvExt);
+    char* argv4[] = {"lua", "-e", "dofile('/init.lua')", "prog.lua"};
+    char* argv3[] = {"lua", "-e", "dofile('/init.lua')"};
+    char* argv2[] = {"lua", "prog.lua"};
+    int progExists = (access("/prog.lua", F_OK) == 0);
+    int initExists = (access("/init.lua", F_OK) == 0);
+    if (initExists) {
+        if (progExists)
+            return main(4, argv4);
+        else
+            return main(3, argv3);
     }
-    if (access("/prog.lua", F_OK) == 0) {
-        return main(2, argvPrg);
+    if (progExists) {
+        return main(2, argv2);
     }
     return main(1, argv);
 }
