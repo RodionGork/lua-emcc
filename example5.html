@@ -1,0 +1,86 @@
+<center>
+<h1>Example #5</h2>
+<h3>Drawing parametric Heart on the Canvas</h3>
+
+<canvas id="canvas1" style="border:1px solid gray" width="640" height="480"></canvas>
+<br/><br/>
+<button onclick="runLua()">(re-)Run the code</button>
+<br/><br/>
+<textarea rows="16" cols="70" id="input" placeholder="your code">require "graph"
+
+graph.init()
+graph.rect(0, 0, graph.w, graph.h, '#fff') -- clear
+
+fn heart(size)
+  t = 628
+  while t != 0 do -- 'for' will work too, of course
+    x = size * math.sqrt(2) * math.sin(t/100)^3
+    c = math.cos(t/100)
+    y = size * (2*c - c^2 - c^3)
+    graph.rect(graph.w//2 + math.floor(x) - 2, graph.h//4 - math.floor(y), 5, 5, 'red')
+    t -= 1
+  end
+end
+
+for sz = 80,170,10 do heart(sz) end
+</textarea>
+<br/><br/>
+<a href="https://github.com/rodiongork/lua-emcc">back to Lua-EMCC project</a>
+
+<script src="./lua.js"></script>
+
+<script>
+var code =`
+graph = {}
+graph.init = function(name)
+  if name ~= nil then
+    os.execute(string.format('cnv1 = document.getElementById("%s")', name))
+  else
+    os.execute('cnv1 = document.getElementsByTagName("canvas")[0]')
+  end
+  local wh = os.getenv('cnv1.width * 10000 + cnv1.height')
+  graph.w = wh // 10000;
+  graph.h = wh % 10000;
+  print(graph.w, graph.h)
+  os.execute('ctx1 = cnv1.getContext("2d");ctx1.lineWidth=2;')
+end
+graph.rect = function(x,y,w,h,style)
+  os.execute(string.format('ctx1.fillStyle = "%s"; ctx1.fillRect(%d,%d,%d,%d)', style, x, y, w, h))
+end
+graph.color = function(c)
+  os.execute(string.format('ctx1.strokeStyle = "%s";', c))
+end
+graph.line = function(x1, y1, x2, y2)
+  os.execute(string.format('ctx1.beginPath();ctx1.moveTo(%d,%d);ctx1.lineTo(%d,%d);ctx1.stroke();', x1, y1, x2, y2));
+end
+graph.delay = function(n)
+  os.execute('#d' .. n)
+end
+`;
+
+Module.noInitialRun = true;
+
+Module.preRun = function() {
+	var output = '';
+    function stdout(code) {
+        output += String.fromCharCode(code);
+        if (code == 10) {
+        	console.log(output);
+        	output = '';
+        }
+    }
+    FS.init(()=>null, stdout, stdout);
+}
+
+Module.onRuntimeInitialized = function(){
+    FS.writeFile('graph.lua', code);
+}
+
+function runLua() {
+    FS.writeFile('prog.lua', document.getElementById('input').value);
+    retCode = Module.ccall('shmain', 'number', [], []);
+    console.log('retcode: ' + retCode);
+}
+
+setTimeout(runLua, 3000);
+</script>
