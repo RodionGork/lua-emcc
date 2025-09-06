@@ -6,7 +6,10 @@ Lua code in webpages and making interaction to it.
 Demo: [**Lua Sanbox in your browser**](https://rodiongork.github.io/lua-emcc) - it also allows embedding
 code to run into the url, thus serving as simplified Lua "Fiddle".
 
-Also check [Example #4 - drawing on Canvas](https://rodiongork.github.io/lua-emcc/example4.html)
+Also check [Example #4](https://rodiongork.github.io/lua-emcc/example4.html) - drawing on Canvas
+and
+[Example #5](https://rodiongork.github.io/lua-emcc/example5.html) - using "syntactic sugar" from
+[Lua-Plus](https://github.com/rodiongork/lua-plus) project.
 
 ## Using in Your project
 
