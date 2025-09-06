@@ -1032,6 +1032,15 @@ static void setvararg (FuncState *fs, int nparams) {
 }
 
 
+static void typehint(LexState *ls) {
+  if (testnext(ls, ':')) {
+    if (ls->t.token != TK_NAME)
+      luaX_syntaxerror(ls, "type hint expected after colon");
+    else
+      luaX_next(ls);
+  }
+}
+
 static void parlist (LexState *ls) {
   /* parlist -> [ {NAME ','} (NAME | '...') ] */
   FuncState *fs = ls->fs;
@@ -1053,6 +1062,7 @@ static void parlist (LexState *ls) {
         }
         default: luaX_syntaxerror(ls, "<name> or '...' expected");
       }
+      typehint(ls);
     } while (!isvararg && testnext(ls, ','));
   }
   adjustlocalvars(ls, nparams);
@@ -1077,6 +1087,7 @@ static void body (LexState *ls, expdesc *e, int ismethod, int line) {
   }
   parlist(ls);
   checknext(ls, ')');
+  typehint(ls);
   statlist(ls);
   new_fs.f->lastlinedefined = ls->linenumber;
   check_match(ls, TK_END, TK_FUNCTION, line);

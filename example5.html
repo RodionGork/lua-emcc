@@ -11,7 +11,7 @@
 graph.init()
 graph.rect(0, 0, graph.w, graph.h, '#fff') -- clear
 
-fn heart(size)
+fn heart(size:integer):void
   t = 628
   while t != 0 do -- 'for' will work too, of course
     x = size * math.sqrt(2) * math.sin(t/100)^3
